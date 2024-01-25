@@ -1,6 +1,15 @@
-- hosts: all
+- hosts: wordpress
   become: yes
   gather_facts: False
+  vars:
+    nagios_log_server: "192.168.0.164"
+    nagios_log_port: "514"
+
+  roles:
+    - server
+    - php
+    - mysql
+    - wordpress
 
   tasks:
     - name: Update package lists
@@ -15,10 +24,27 @@
     - name: install python 2
       raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
 
-- hosts: wordpress
-  roles:
-    - server
-    - php
-    - mysql
-    - wordpress
+    - name: Install aptitude
+      apt:
+        name: aptitude
+        state: latest
+        update_cache: true
+
+    - name: Update apt and install rsyslog
+      apt:
+        pkg:
+          - rsyslog
+        state: latest
+        update_cache: true
+
+    - name: Configure rsyslog to send logs to syslog server
+      become: yes
+      lineinfile:
+        dest: /etc/rsyslog.conf
+        regexp: '\Z'
+        line: "*.* @@{{ nagios_log_server }}:{{ nagios_log_port }}"
+
+    - name: Restart rsyslog service
+      service: name=rsyslog state=restarted
+
 

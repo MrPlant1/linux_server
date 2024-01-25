@@ -1,6 +1,7 @@
 check_nr
 check_nrpe
 service
+httpd.conf
 
 
 
