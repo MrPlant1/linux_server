@@ -1,0 +1,13 @@
+---
+- name: update nagios
+  hosts: all
+  become: true
+  tasks:
+    - name: latest nagios
+      apt:
+        name: nagios
+        state: latest
+    - name: restart nagios
+      service:
+        name: nagios
+        state: restarteda

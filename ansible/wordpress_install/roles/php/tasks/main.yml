@@ -1,0 +1,8 @@
+---
+# tasks file for php
+- name: Install php extensions
+  apt: name={{ item }} state=present
+  become: yes
+  with_items:
+  - php8.1-gd
+  - php8.1-ssh2

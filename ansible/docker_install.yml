@@ -1,0 +1,94 @@
+---
+- hosts: Docker
+  become: true
+  vars:
+    container_count: 2
+    default_container_name: docker
+    default_container_image: ubuntu
+    default_container_command: sleep 1
+    nagios_log_server: "192.168.0.164"
+    nagios_log_port: "514"
+
+  tasks:
+    - name: Install aptitude
+      apt:
+        name: aptitude
+        state: latest
+        update_cache: true
+
+    - name: Install required system packages
+      apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+        state: latest
+        update_cache: true
+
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Update apt and install docker-ce
+      apt:
+        name: docker-ce
+        state: latest
+        update_cache: true
+
+    - name: Update apt and install rsyslog
+      apt:
+        pkg:
+          - rsyslog
+        state: latest
+        update_cache: true
+
+    - name: Install Docker Module for Python
+      pip:
+        name: docker
+
+    - name: Pull default Docker image
+      community.docker.docker_image:
+        name: "{{ default_container_image }}"
+        source: pull
+
+    - name: Create default containers
+      community.docker.docker_container:
+        name: "{{ default_container_name }}{{ item }}"
+        image: "{{ default_container_image }}"
+        command: "{{ default_container_command }}"
+        state: present
+      with_sequence: count={{ container_count }}
+      
+    - name: ensure container 1 is running
+      docker_container:
+        name: "{{ default_container_name }}1"
+        state: started
+        image: "{{ default_container_image }}"
+        pull: true
+
+    - name: ensure container 2 is running
+      docker_container:
+        name: "{{ default_container_name }}2"
+        state: started
+        image: "{{ default_container_image }}"
+        pull: true
+
+    - name: Configure rsyslog to send logs to syslog server
+      become: yes
+      lineinfile:
+        dest: /etc/rsyslog.conf
+        regexp: '\Z'
+        line: "*.* @@{{ nagios_log_server }}:{{ nagios_log_port }}"
+
+    - name: Restart rsyslog service
+      service: name=rsyslog state=restarted

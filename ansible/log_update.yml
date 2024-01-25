@@ -1,0 +1,13 @@
+---
+- name: update rsyslog
+  hosts: all
+  become: true
+  tasks:
+    - name: latest rsyslog
+      apt:
+        name: rsyslog
+        state: latest
+    - name: restart rsyslog
+      service:
+        name: rsyslog
+        state: restarted
